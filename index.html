@@ -1586,7 +1586,9 @@ async function remoteApply(){
   R.why="";
   try{
     if(S.remote.net==="lan"){                       // ---- servidor na rede local ----
-      const addr=(S.remote.lan||"").trim().replace(/^wss?:\/\//,"").replace(/\/+$/,"");
+      let addr=(S.remote.lan||"").trim().replace(/^wss?:\/\//,"").replace(/\/+$/,"");
+      if(!addr && /^https?:/.test(location.protocol) && !/claudeusercontent|claude\.ai|github\.io|^file/.test(location.host))
+        addr=location.host;          // página servida pelo próprio servidor: usa o endereço dela
       if(!addr){ R.why="endereço do servidor vazio"; remChip("off","falta o endereço"); return; }
       if(location.protocol==="https:" && !/^https?:/.test(S.remote.lan) ){
         R.why="página em https não pode falar com servidor em http — abra o app pelo endereço do servidor";
@@ -1627,7 +1629,7 @@ async function remoteApply(){
   }catch(e){ R.why="exceção: "+(e&&e.message||e); remChip("off","sem conexão"); }
 }
 function setRole(r){ R.role=r; S.remote.role=r; save(); remoteApply(); if(r==="palco") go("pp"); renderLib(); }
-const VER="3.5";
+const VER="3.6";
 async function diag(){
   const L=["TAKE v"+VER, "endereço: "+(location.host+location.pathname).slice(0,70)];
   L.push("window.claude: "+(window.claude&&window.claude.use?"presente":"AUSENTE — a página não está rodando como artefato"));
@@ -1673,7 +1675,11 @@ function initRemote(){
     remoteApply(); };
   $("#netCloud").addEventListener("click",()=>netSet("cloud"));
   $("#netLan").addEventListener("click",()=>netSet("lan"));
+  const auto = /^https?:/.test(location.protocol) && !/claudeusercontent|claude\.ai|github\.io/.test(location.host) ? location.host : "";
   $("#inLan").value=S.remote.lan||"";
+  if(auto){ $("#inLan").placeholder=auto+"  (este servidor)";
+    const f=$("#lanField"); if(f) f.insertAdjacentHTML("beforeend",
+      '<p class="hint">Em branco, usa o servidor que serviu esta página: <b>'+auto+'</b></p>'); }
   $("#inLan").addEventListener("change",()=>{ S.remote.lan=$("#inLan").value.trim(); save();
     if(S.remote.net==="lan"){ if(R.room){ try{R.room.leave()}catch(e){} R.room=null; R.joinedCode=null; } remoteApply(); } });
   $("#netCloud").setAttribute("aria-pressed",S.remote.net!=="lan");
